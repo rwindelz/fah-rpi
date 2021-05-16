@@ -29,12 +29,12 @@ jobs:
             rwindelz/fah-rpi
           # generate Docker tags based on the following events/attributes
           tags: |
+            type=ref,event=tag
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            latest
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
