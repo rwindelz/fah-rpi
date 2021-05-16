@@ -1,0 +1,109 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fah-rpi
+  namespace: fah-rpi
+  labels:
+    app: fah-rpi
+spec:
+  selector:
+    matchLabels:
+      app: fah-rpi
+  replicas: 2 # Set number of replicas to run - one replica per node
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 100%
+      maxSurge: 100%
+  template:
+    metadata:
+      labels:
+        app: fah-rpi
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - fah-rpi
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+        - name: fah-rpi
+          image: "rwindelz/fah-rpi:latest"
+          # --run-as UID should match runAsUser value in containers securityContext
+          command:
+            - "/usr/bin/FAHClient"
+            - "--config"
+            - "/var/lib/fahclient/config.xml"
+            - "--config-rotate=false"
+            - "--run-as"
+            - "6603"
+            - "--pid-file=/var/lib/fahclient/fahclient.pid"
+            - "--gpu=false"
+          resources:
+            limits:
+              cpu: 3000m # How much CPU you wish to donate per node
+              memory: 1024Mi
+            requests:
+              cpu: 500m
+              memory: 512Mi
+          # no special privileges for the container
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 6603
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - mountPath: /var/lib/fahclient
+              name: fahclient
+      # make emptyDir to mount on the work directory /var/lib/fahclient
+      # to make rest of the container's root filesystem read-only
+      volumes:
+        - name: fahclient
+          emptyDir: {}
+        - name: fah-rpi-config
+          configMap:
+            name: foldingathome-config
+      initContainers:
+        - name: copy-config
+          imagePullPolicy: Always
+          image: "rwindelz/fah-rpi:latest"
+          command:
+            - "sh"
+            - "-c"
+#           - "cp /etc/fahclient/config.xml /var/lib/fahclient/config.xml"
+            - "cp /etc/fahclient-config/config.xml /var/lib/fahclient/config.xml"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 6603
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - mountPath: /var/lib/fahclient
+              name: fahclient
+            - name: fah-rpi-config
+              mountPath: /etc/fahclient-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: foldingathome-config
+  namespace: fah-rpi
+data:
+  config.xml: |
+    <config>
+      <!-- User Information -->
+      <user value=""/>       <!-- Enter your user name here -->
+      <team value=""/>       <!-- Your team number -->
+      <passkey value=""/>    <!-- 32 hexadecimal characters if provided -->
+
+      <power value="full"/>  <!-- Throttling is done by K3s -->
+      <gpu value="false"/>
+      <fold-anon value="false"/>
+      <slot id="0" type="CPU"/>
+    </config>
+---
