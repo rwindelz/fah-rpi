@@ -12,7 +12,7 @@ RUN apt update && \
 
 # Install folding@home fahclient
 WORKDIR /root
-RUN curl -O https://download.foldingathome.org/releases/beta/release/fahclient/debian-stable-arm64/v${CLIENT_MAJOR_VERSION}/fahclient_${CLIENT_MAJOR_VERSION}.${CLIENT_MINOR_VERION}_arm64.deb
+RUN curl -O https://download.foldingathome.org/releases/public/release/fahclient/debian-stable-arm64/v${CLIENT_MAJOR_VERSION}/fahclient_${CLIENT_MAJOR_VERSION}.${CLIENT_MINOR_VERION}_arm64.deb
 RUN dpkg -i --force-depends fahclient_${CLIENT_MAJOR_VERSION}.${CLIENT_MINOR_VERION}_arm64.deb
 
 ### Image stage #######################################################
